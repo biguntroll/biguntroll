@@ -1,0 +1,16 @@
+{
+  "neutral_words": [
+    "apple", "river", "book", "chair", "cloud", "door", "engine", "forest", "garden",
+    "house", "island", "jacket", "kitchen", "lamp", "mountain", "notebook", "ocean", "pencil",
+    "quartz", "road", "sun", "tree", "umbrella", "valley", "window", "xylophone", "yarn",
+    "zebra", "ball", "car", "desk", "elephant", "fan", "glove", "hat", "ice", "jungle",
+    "kite", "leaf", "mirror", "nest", "orange", "pillow", "queen", "rock", "shoe", "table",
+    "uniform", "vase", "whistle", "x-ray", "yacht", "zipper", "airplane", "bottle", "candle",
+    "drum", "egg", "fish", "guitar", "hammer", "ink", "jar", "key", "ladder", "magnet",
+    "needle", "oven", "pan", "quilt", "radio", "scissors", "telephone", "umbrella", "violin",
+    "watch", "xylophone", "yogurt", "zucchini", "anchor", "basket", "clock", "diamond",
+    "envelope", "flag", "glasses", "helmet", "iron", "jewel", "kettle", "lock", "motor",
+    "net", "oil", "pump", "quiver", "rope", "screw", "telescope", "urn", "vent", "wheel",
+    "xenon", "yard", "zip"
+  ]
+}
