@@ -22,7 +22,7 @@ async function startShuffle() {
     const message = `Think of words that start with ${letter.toUpperCase()}`;
     document.getElementById("prompt").textContent = message;
     speak(message);
-    await delay(5000);
+    await delay(10000);
   }
 
   document.getElementById("prompt").textContent = "";
