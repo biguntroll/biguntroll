@@ -137,3 +137,139 @@ button:disabled {
     font-size: 1rem;
   }
 }
+
+
+// script.js
+
+let words = [];
+let stopRequested = false;
+let shuffleLoopRunning = false;
+let sessionTimeoutId = null;
+let wakeLock = null;
+
+// Cache UI elements
+const startBtn = document.getElementById('startButton');
+const stopBtn = document.getElementById('stopButton');
+const durationSlider = document.getElementById('durationSlider');
+const durationLabel = document.getElementById('durationLabel');
+const promptEl = document.getElementById('prompt');
+
+// Update duration label
+durationSlider.addEventListener('input', () => {
+  durationLabel.textContent = durationSlider.value;
+});
+
+// Load word list
+fetch('words.json')
+  .then(res => res.json())
+  .then(data => {
+    words = data.neutral_words;
+  })
+  .catch(err => console.error('Failed to load words:', err));
+
+// Start session
+startBtn.addEventListener('click', () => {
+  if (shuffleLoopRunning) return;
+  shuffleLoopRunning = true;
+  stopRequested = false;
+
+  // Disable Start only
+  startBtn.disabled = true;
+
+  // Calculate timeout
+  const minutes = parseInt(durationSlider.value, 10);
+  sessionTimeoutId = setTimeout(() => {
+    stopShuffle('Session complete.');
+  }, minutes * 60 * 1000);
+
+  startLoop();
+});
+
+// Stop session manually (always enabled)
+stopBtn.addEventListener('click', () => {
+  if (!shuffleLoopRunning) return;
+  stopShuffle('Shuffle stopped.');
+});
+
+async function startLoop() {
+  if (!words.length) {
+    alert('Word list not loaded yet!');
+    endSession();
+    return;
+  }
+
+  await requestWakeLock();
+
+  while (!stopRequested) {
+    await startShuffle();
+    if (stopRequested) break;
+    await delay(2000);
+  }
+
+  endSession();
+}
+
+async function startShuffle() {
+  const word = words[Math.floor(Math.random() * words.length)];
+  await speak(`Your word is ${word}`);
+  await delay(2000);
+
+  for (const letter of word) {
+    if (stopRequested) return;
+    const message = `Think of words that start with ${letter.toUpperCase()}`;
+    promptEl.textContent = message;
+    await speak(message);
+    await delay(3000);
+  }
+
+  promptEl.textContent = '';
+}
+
+function speak(text) {
+  return new Promise(resolve => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.onend = resolve;
+    speechSynthesis.speak(u);
+  });
+}
+
+function delay(ms) {
+  return new Promise(res => setTimeout(res, ms));
+}
+
+async function stopShuffle(message) {
+  stopRequested = true;
+  speechSynthesis.cancel();
+  clearTimeout(sessionTimeoutId);
+  promptEl.textContent = message;
+}
+
+function endSession() {
+  shuffleLoopRunning = false;
+  startBtn.disabled = false;
+  // Stop remains enabled
+
+  // Release wake lock
+  if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+
+  window.close();
+}
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (e) {
+      console.warn('WakeLock failed:', e);
+    }
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && wakeLock) {
+    requestWakeLock();
+  }
+});
