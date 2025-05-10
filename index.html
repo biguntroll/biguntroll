@@ -2,20 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CognitiveShuffleiNator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Word Shuffle Trainer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Cognitive ShuffleiNator</h1>
-  <div class="controls">
-    <button id="startButton">Start Shuffle</button>
-    <button id="stopButton">Stop Shuffle</button>
-  </div>
+  <h1>Word Shuffle Trainer</h1>
+  <p class="intro">
+    <strong>Welcome to the Word Shuffle Trainer!</strong><br>
+    Use the slider above to pick a session length (10–60 minutes), then tap <strong>Start</strong>. The app will keep your screen awake, select a random neutral word, speak it aloud, and prompt you to think of words beginning with each letter. Hit <strong>Stop</strong> at any time to end early. When your time is up (or you press Stop), the session ends, the wake lock is released, and the page will close automatically if your browser allows.
+  </p>
+
   <div class="slider-container">
-    <label for="durationSlider">Session Duration: <span id="durationLabel">30</span> minutes</label><br>
     <input type="range" id="durationSlider" min="10" max="60" value="30">
+    <span id="durationLabel">30</span> min
   </div>
-  <p id="prompt"></p>
+
+  <div class="buttons">
+    <button id="startButton">Start</button>
+    <button id="stopButton" disabled>Stop</button>
+  </div>
+
+  <div id="prompt"></div>
+
   <script src="script.js"></script>
 </body>
 </html>
