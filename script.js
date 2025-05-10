@@ -83,18 +83,7 @@ function speak(text) {
 
 // Delay with stop check
 function delay(ms) {
-  return new Promise(resolve => {
-    const interval = setInterval(() => {
-      if (stopRequested) {
-        clearInterval(interval);
-        resolve();
-      }
-    }, 100);
-    setTimeout(() => {
-      clearInterval(interval);
-      resolve();
-    }, ms);
-  });
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Stop handler
