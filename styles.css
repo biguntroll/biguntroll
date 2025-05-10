@@ -1,141 +1,139 @@
-// script.js
+/* styles.css */
 
-let words = [];
-let stopRequested = false;
-let shuffleLoopRunning = false;
-let sessionTimeoutId = null;
-let wakeLock = null;
+/* Base layout and dark theme */
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: #111;
+  color: #eee;
+}
 
-// Cache UI elements
-const startBtn = document.getElementById('startButton');
-const stopBtn = document.getElementById('stopButton');
-const durationSlider = document.getElementById('durationSlider');
-const durationLabel = document.getElementById('durationLabel');
-const promptEl = document.getElementById('prompt');
+h1 {
+  margin-bottom: 1rem;
+  font-size: 2rem;
+  text-align: center;
+}
 
-// Initial button states
-startBtn.disabled = false;
-stopBtn.disabled = true;
+/* Intro text */
+.intro {
+  max-width: 700px;
+  margin: 0 auto 1.5rem;
+  text-align: center;
+  line-height: 1.4;
+}
 
-durationSlider.addEventListener('input', () => {
-  durationLabel.textContent = durationSlider.value;
-});
+/* Slider container */
+.slider-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 500px;
+  margin: 1rem 0;
+}
 
-// Load word list
-fetch('words.json')
-  .then(res => res.json())
-  .then(data => {
-    words = data.neutral_words;
-  })
-  .catch(err => console.error('Failed to load words:', err));
+#durationSlider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #444;
+  outline: none;
+  margin-right: 0.75rem;
+}
 
-// Start session
-startBtn.addEventListener('click', () => {
-  if (shuffleLoopRunning) return;
-  shuffleLoopRunning = true;
-  stopRequested = false;
+#durationSlider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #444;
+}
 
-  // Toggle buttons
-  startBtn.disabled = true;
-  stopBtn.disabled = false;
+#durationSlider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #444;
+}
 
-  // Calculate duration
-  const minutes = parseInt(durationSlider.value, 10);
-  sessionTimeoutId = setTimeout(() => {
-    stopShuffle('Session complete.');
-  }, minutes * 60 * 1000);
+#durationSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FF9500;
+  margin-top: -8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
 
-  startLoop();
-});
+#durationSlider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FF9500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
 
-// Stop session manually
-stopBtn.addEventListener('click', () => {
-  if (!shuffleLoopRunning) return;
-  stopShuffle('Shuffle stopped.');
-});
+#durationLabel {
+  width: 2.5rem;
+  text-align: center;
+  font-size: 1.25rem;
+}
 
-async function startLoop() {
-  if (words.length === 0) {
-    alert('Word list not loaded yet!');
-    endSession();
-    return;
+/* Buttons */
+.buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+button {
+  flex: 1;
+  padding: 1rem 2rem;
+  font-size: 1.25rem;
+  border: none;
+  border-radius: 1rem;
+  background-color: #222;
+  color: #eee;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  transition: background-color 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  background-color: #333;
+}
+
+button:disabled {
+  background-color: #555;
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Prompt text */
+#prompt {
+  margin-top: 2rem;
+  font-size: 1.5rem;
+  text-align: center;
+  min-height: 4rem;
+  padding: 0 1rem;
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  #durationLabel {
+    width: 2rem;
+    font-size: 1rem;
   }
-
-  await requestWakeLock();
-
-  while (!stopRequested) {
-    await startShuffle();
-    if (stopRequested) break;
-    await delay(2000);
-  }
-
-  endSession();
-}
-
-async function startShuffle() {
-  const word = words[Math.floor(Math.random() * words.length)];
-  await speak(`Your word is ${word}`);
-  await delay(2000);
-
-  for (const letter of word) {
-    if (stopRequested) return;
-    const message = `Think of words that start with ${letter.toUpperCase()}`;
-    promptEl.textContent = message;
-    await speak(message);
-    await delay(3000);
-  }
-
-  promptEl.textContent = '';
-}
-
-function speak(text) {
-  return new Promise(resolve => {
-    const u = new SpeechSynthesisUtterance(text);
-    u.onend = resolve;
-    speechSynthesis.speak(u);
-  });
-}
-
-function delay(ms) {
-  return new Promise(res => setTimeout(res, ms));
-}
-
-async function stopShuffle(message) {
-  stopRequested = true;
-  speechSynthesis.cancel();
-  clearTimeout(sessionTimeoutId);
-  promptEl.textContent = message;
-}
-
-function endSession() {
-  shuffleLoopRunning = false;
-
-  // Toggle buttons back
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
-
-  // Release wake lock
-  if (wakeLock) {
-    wakeLock.release().catch(() => {});
-    wakeLock = null;
-  }
-
-  // Attempt to close
-  window.close();
-}
-
-async function requestWakeLock() {
-  if ('wakeLock' in navigator) {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-    } catch (e) {
-      console.warn('WakeLock failed:', e);
-    }
+  button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
   }
 }
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && wakeLock) {
-    requestWakeLock();
-  }
-});
