@@ -1,150 +1,139 @@
-// script.js
-let words = [];
-let stopRequested = false;
-let shuffleLoopRunning = false;
-let sessionTimeoutId = null;
-let wakeLock = null;
+/* styles.css */
 
-// Cache buttons
-const startBtn = document.getElementById("startButton");
-const stopBtn = document.getElementById("stopButton");
-
-// Load word list
-fetch('words.json')
-  .then(response => response.json())
-  .then(data => {
-    words = data.neutral_words;
-  });
-
-// Update label when slider changes
-const durationSlider = document.getElementById("durationSlider");
-const durationLabel = document.getElementById("durationLabel");
-durationSlider.addEventListener("input", () => {
-  durationLabel.textContent = durationSlider.value;
-});
-
-// Start button logic
-startBtn.addEventListener("click", () => {
-  if (!shuffleLoopRunning) {
-    // Toggle buttons
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-
-    stopRequested = false;
-    shuffleLoopRunning = true;
-
-    const durationMinutes = parseInt(durationSlider.value, 10);
-    const durationMs = durationMinutes * 60 * 1000;
-
-    sessionTimeoutId = setTimeout(() => {
-      stopShuffle("Session complete.");
-    }, durationMs);
-
-    startLoop();
-  }
-});
-
-// Stop button logic
-stopBtn.addEventListener("click", () => {
-  stopShuffle("Shuffle stopped.");
-});
-
-// Main loop
-async function startLoop() {
-  if (words.length === 0) {
-    alert('Word list not loaded yet!');
-    shuffleLoopRunning = false;
-    // Reset buttons
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-    return;
-  }
-
-  await requestWakeLock();
-
-  while (!stopRequested) {
-    await startShuffle();
-    if (stopRequested) break;
-    await delay(2000);
-  }
-
-  shuffleLoopRunning = false;
+/* Base layout and dark theme */
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background: #111;
+  color: #eee;
 }
 
-// Word shuffle routine
-async function startShuffle() {
-  const word = words[Math.floor(Math.random() * words.length)];
-  await speak(`Your word is ${word}`);
-  await delay(2000);
+h1 {
+  margin-bottom: 1rem;
+  font-size: 2rem;
+  text-align: center;
+}
 
-  for (let letter of word) {
-    if (stopRequested) return;
-    const message = `Think of words that start with ${letter.toUpperCase()}`;
-    document.getElementById("prompt").textContent = message;
-    await speak(message);
-    await delay(3000);
+/* Intro text */
+.intro {
+  max-width: 700px;
+  margin: 0 auto 1.5rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Slider container */
+.slider-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 500px;
+  margin: 1rem 0;
+}
+
+#durationSlider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: #444;
+  outline: none;
+  margin-right: 0.75rem;
+}
+
+#durationSlider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #444;
+}
+
+#durationSlider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #444;
+}
+
+#durationSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FF9500;
+  margin-top: -8px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+#durationSlider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FF9500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+#durationLabel {
+  width: 2.5rem;
+  text-align: center;
+  font-size: 1.25rem;
+}
+
+/* Buttons */
+.buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+button {
+  flex: 1;
+  padding: 1rem 2rem;
+  font-size: 1.25rem;
+  border: none;
+  border-radius: 1rem;
+  background-color: #222;
+  color: #eee;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  transition: background-color 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  background-color: #333;
+}
+
+button:disabled {
+  background-color: #555;
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Prompt text */
+#prompt {
+  margin-top: 2rem;
+  font-size: 1.5rem;
+  text-align: center;
+  min-height: 4rem;
+  padding: 0 1rem;
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  #durationLabel {
+    width: 2rem;
+    font-size: 1rem;
   }
-
-  document.getElementById("prompt").textContent = "";
-}
-
-// Speech function
-function speak(text) {
-  return new Promise(resolve => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.onend = () => resolve();
-    speechSynthesis.speak(utterance);
-  });
-}
-
-// Delay helper
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// Stop handler
-async function stopShuffle(message) {
-  if (!shuffleLoopRunning && message !== "Session complete.") return;
-
-  stopRequested = true;
-  speechSynthesis.cancel();
-  clearTimeout(sessionTimeoutId);
-  document.getElementById("prompt").textContent = message;
-  shuffleLoopRunning = false;
-
-  // Toggle buttons
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
-
-  // Release wake lock
-  if (wakeLock) {
-    try {
-      await wakeLock.release();
-      wakeLock = null;
-      console.log("Wake lock released");
-    } catch (err) {
-      console.warn("Wake lock release failed:", err);
-    }
-  }
-
-  // Attempt to close window
-  window.close();
-}
-
-// Wake Lock logic
-async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLock = await navigator.wakeLock.request('screen');
-      console.log("Wake lock acquired");
-    }
-  } catch (err) {
-    console.error("Failed to acquire wake lock:", err);
+  button {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
   }
 }
-
-document.addEventListener("visibilitychange", async () => {
-  if (wakeLock && document.visibilityState === "visible") {
-    await requestWakeLock();
-  }
-});
