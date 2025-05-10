@@ -60,30 +60,32 @@ async function startLoop() {
 // Word shuffle routine
 async function startShuffle() {
   const word = words[Math.floor(Math.random() * words.length)];
-  speak(`Your word is ${word}`);
+  await speak(`Your word is ${word}`);
   await delay(2000);
 
   for (let letter of word) {
     if (stopRequested) return;
     const message = `Think of words that start with ${letter.toUpperCase()}`;
     document.getElementById("prompt").textContent = message;
-    speak(message);
-    await delay(5000);
+    await speak(message);
   }
 
   document.getElementById("prompt").textContent = "";
 }
 
-// Speech function
+// Speech function that waits for speech to finish
 function speak(text) {
-  const utterance = new SpeechSynthesisUtterance(text);
-  speechSynthesis.cancel();
-  speechSynthesis.speak(utterance);
+  return new Promise((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => resolve();
+    speechSynthesis.cancel(); // Cancel any ongoing speech before starting new
+    speechSynthesis.speak(utterance);
+  });
 }
 
 // Delay with stop check
 function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // Stop handler
