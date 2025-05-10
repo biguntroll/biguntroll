@@ -6,14 +6,21 @@ fetch('words.json')
     words = data.neutral_words;
   });
 
-document.getElementById("startButton").addEventListener("click", startShuffle);
+document.getElementById("startButton").addEventListener("click", startLoop);
 
-async function startShuffle() {
+async function startLoop() {
   if (words.length === 0) {
     alert('Word list not loaded yet!');
     return;
   }
 
+  while (true) { // Infinite loop to continuously pick new words
+    await startShuffle(); // Wait for the current word loop to complete
+    await delay(2000); // Add a small pause between words
+  }
+}
+
+async function startShuffle() {
   const word = words[Math.floor(Math.random() * words.length)];
   speak(`Your word is ${word}`);
   await delay(2000);
