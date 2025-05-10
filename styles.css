@@ -30,6 +30,18 @@ h1 {
   line-height: 1.4;
 }
 
+/* Make the list inside .explanation left‑aligned for easier reading */
+.explanation ul {
+  text-align: left;
+  list-style: disc;
+  padding-left: 1.25rem; /* slight indent so bullets sit nicely */
+  margin: 1rem 0;
+}
+
+.explanation li {
+  margin-bottom: 0.5rem;
+}
+
 /* Slider container */
 .slider-container {
   display: flex;
