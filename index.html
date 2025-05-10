@@ -1,21 +1,247 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>CognitiveShuffleiNator</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sleep Aid Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+      line-height: 1.5;
+      background-color: #f7f7f7;
+      color: #333;
+    }
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+    }
+    #explanation {
+      margin-bottom: 20px;
+      font-size: 1.1rem;
+      color: #555;
+      text-align: center;
+    }
+    #timeRemaining {
+      margin-top: 30px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #777;
+      text-align: center;
+    }
+    #prompt {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      min-height: 2em;
+      text-align: center;
+    }
+    button {
+      margin-right: 10px;
+      padding: 0.5em 1em;
+      font-size: 1rem;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    #durationLabel {
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .slider-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Cognitive ShuffleiNator</h1>
-  <div class="controls">
-    <button id="startButton">Start Shuffle</button>
-    <button id="stopButton">Stop Shuffle</button>
-  </div>
+
+  <h1>Sleep Aid Tool</h1>
+
+  <p id="explanation">
+    This tool uses a cognitive exercise to help you fall asleep. Focus on words that start with each prompted letter. Set the session duration and press Start.
+  </p>
+
   <div class="slider-container">
-    <label for="durationSlider">Session Duration: <span id="durationLabel">30</span> minutes</label><br>
-    <input type="range" id="durationSlider" min="10" max="60" value="30">
+    <label for="durationSlider">Session Duration (minutes):</label>
+    <input type="range" id="durationSlider" min="1" max="30" value="5" />
+    <span id="durationLabel">5</span>
   </div>
-  <p id="prompt"></p>
-  <script src="script.js"></script>
+
+  <div style="text-align: center; margin-bottom: 20px;">
+    <button id="startButton">Start</button>
+    <button id="stopButton">Stop</button>
+  </div>
+
+  <div id="prompt"></div>
+
+  <div id="timeRemaining">Time remaining: 00:00</div>
+
+  <script>
+    let words = [];
+    let stopRequested = false;
+    let shuffleLoopRunning = false;
+    let sessionTimeoutId = null;
+    let wakeLock = null;
+    let sessionEndTime = null;
+    let timeRemainingIntervalId = null;
+
+    // Load word list (example words here, replace with your fetch if needed)
+    words = ["calm", "rest", "peace", "quiet", "sleep", "dream", "relax"];
+
+    // Update label when slider changes
+    document.getElementById("durationSlider").addEventListener("input", function () {
+      document.getElementById("durationLabel").textContent = this.value;
+    });
+
+    // Start button logic
+    document.getElementById("startButton").addEventListener("click", () => {
+      if (!shuffleLoopRunning) {
+        stopRequested = false;
+        shuffleLoopRunning = true;
+
+        const durationMinutes = parseInt(document.getElementById("durationSlider").value);
+        const durationMs = durationMinutes * 60 * 1000;
+
+        sessionEndTime = Date.now() + durationMs;
+
+        sessionTimeoutId = setTimeout(() => {
+          stopShuffle("Session complete.");
+        }, durationMs);
+
+        timeRemainingIntervalId = setInterval(updateTimeRemaining, 1000);
+        updateTimeRemaining();
+
+        startLoop();
+      }
+    });
+
+    // Stop button logic
+    document.getElementById("stopButton").addEventListener("click", () => {
+      stopShuffle("Shuffle stopped.");
+    });
+
+    // Main loop
+    async function startLoop() {
+      if (words.length === 0) {
+        alert('Word list not loaded yet!');
+        shuffleLoopRunning = false;
+        return;
+      }
+
+      await requestWakeLock();
+
+      while (!stopRequested) {
+        await startShuffle();
+        if (stopRequested) break;
+        await delay(2000);
+      }
+
+      shuffleLoopRunning = false;
+    }
+
+    // Word shuffle routine
+    async function startShuffle() {
+      const word = words[Math.floor(Math.random() * words.length)];
+      await speak(`Your word is ${word}`);
+      await delay(2000);
+
+      for (let letter of word) {
+        if (stopRequested) return;
+        const message = `Think of words that start with ${letter.toUpperCase()}`;
+        document.getElementById("prompt").textContent = message;
+        await speak(message);
+        await delay(3000);  // 3 seconds pause after speech
+      }
+
+      document.getElementById("prompt").textContent = "";
+    }
+
+    // Speech function that waits for speech to finish
+    function speak(text) {
+      return new Promise((resolve) => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.onend = () => resolve();
+        speechSynthesis.speak(utterance);
+      });
+    }
+
+    // Delay helper
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Stop handler
+    async function stopShuffle(message) {
+      stopRequested = true;
+      speechSynthesis.cancel();
+      clearTimeout(sessionTimeoutId);
+      clearInterval(timeRemainingIntervalId);
+      sessionEndTime = null;
+      document.getElementById("prompt").textContent = message;
+      document.getElementById("timeRemaining").textContent = "Time remaining: 00:00";
+      shuffleLoopRunning = false;
+
+      // 🔓 Release wake lock
+      if (wakeLock !== null) {
+        try {
+          await wakeLock.release();
+          wakeLock = null;
+          console.log("Wake lock released");
+        } catch (err) {
+          console.warn("Wake lock release failed:", err);
+        }
+      }
+    }
+
+    // Wake Lock logic
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log("Wake lock acquired");
+        } catch (err) {
+          console.error("Failed to acquire wake lock:", err);
+        }
+      }
+    }
+
+    // Re-acquire if released
+    document.addEventListener("visibilitychange", async () => {
+      if (wakeLock !== null && document.visibilityState === "visible") {
+        await requestWakeLock();
+      }
+    });
+
+    // Update the time remaining display
+    function updateTimeRemaining() {
+      if (!sessionEndTime) return;
+
+      const now = Date.now();
+      let diffMs = sessionEndTime - now;
+
+      if (diffMs < 0) {
+        diffMs = 0;
+      }
+
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      const formatted = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      document.getElementById("timeRemaining").textContent = `Time remaining: ${formatted}`;
+
+      if (diffMs === 0) {
+        clearInterval(timeRemainingIntervalId);
+      }
+    }
+  </script>
 </body>
 </html>
