@@ -1,5 +1,6 @@
 let words = [];
 let stopRequested = false;
+let shuffleLoopRunning = false;
 
 fetch('words.json')
   .then(response => response.json())
@@ -7,22 +8,36 @@ fetch('words.json')
     words = data.neutral_words;
   });
 
-document.getElementById("startButton").addEventListener("click", startLoop);
-document.getElementById("stopButton").addEventListener("click", stopShuffle);
+document.getElementById("startButton").addEventListener("click", () => {
+  if (!shuffleLoopRunning) {
+    stopRequested = false;
+    shuffleLoopRunning = true;
+    startLoop();
+  }
+});
+
+document.getElementById("stopButton").addEventListener("click", () => {
+  stopRequested = true;
+  speechSynthesis.cancel();
+});
 
 async function startLoop() {
-  stopRequested = false;
-
   if (words.length === 0) {
     alert('Word list not loaded yet!');
+    shuffleLoopRunning = false;
     return;
   }
 
   while (!stopRequested) {
     await startShuffle();
+
+    // Break early if stopped during shuffle
+    if (stopRequested) break;
+
     await delay(2000);
   }
 
+  shuffleLoopRunning = false;
   document.getElementById("prompt").textContent = "Shuffle stopped.";
 }
 
@@ -43,16 +58,23 @@ async function startShuffle() {
   document.getElementById("prompt").textContent = "";
 }
 
-function stopShuffle() {
-  stopRequested = true;
-  speechSynthesis.cancel();
-}
-
 function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
+  speechSynthesis.cancel(); // Cancel any current speech before starting a new one
   speechSynthesis.speak(utterance);
 }
 
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => {
+    const interval = setInterval(() => {
+      if (stopRequested) {
+        clearInterval(interval);
+        resolve(); // End the delay early
+      }
+    }, 100);
+    setTimeout(() => {
+      clearInterval(interval);
+      resolve();
+    }, ms);
+  });
 }
