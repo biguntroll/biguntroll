@@ -98,12 +98,23 @@ function delay(ms) {
 }
 
 // Stop handler
-function stopShuffle(message) {
+async function stopShuffle(message) {
   stopRequested = true;
   speechSynthesis.cancel();
   clearTimeout(sessionTimeoutId);
   document.getElementById("prompt").textContent = message;
   shuffleLoopRunning = false;
+
+  // 🔓 Release wake lock
+  if (wakeLock !== null) {
+    try {
+      await wakeLock.release();
+      wakeLock = null;
+      console.log("Wake lock released");
+    } catch (err) {
+      console.warn("Wake lock release failed:", err);
+    }
+  }
 }
 
 // Wake Lock logic
