@@ -1,118 +1,150 @@
-/* styles.css */
+// script.js
+let words = [];
+let stopRequested = false;
+let shuffleLoopRunning = false;
+let sessionTimeoutId = null;
+let wakeLock = null;
 
-/* Base layout */
-body {
-  margin: 0;
-  padding: 20px;
-  font-family: sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  min-height: 100vh;
-  box-sizing: border-box;
-  background: #f9f9f9;
-  color: #333;
-}
+// Cache buttons
+const startBtn = document.getElementById("startButton");
+const stopBtn = document.getElementById("stopButton");
 
-h1 {
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
-  text-align: center;
-}
+// Load word list
+fetch('words.json')
+  .then(response => response.json())
+  .then(data => {
+    words = data.neutral_words;
+  });
 
-/* Intro text styling */
-.intro {
-  max-width: 600px;
-  margin: 0 auto 1.5rem;
-  text-align: center;
-}
+// Update label when slider changes
+const durationSlider = document.getElementById("durationSlider");
+const durationLabel = document.getElementById("durationLabel");
+durationSlider.addEventListener("input", () => {
+  durationLabel.textContent = durationSlider.value;
+});
 
-/* Slider layout */
-.slider-container {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  max-width: 400px;
-  margin: 1rem 0;
-}
+// Start button logic
+startBtn.addEventListener("click", () => {
+  if (!shuffleLoopRunning) {
+    // Toggle buttons
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
 
-#durationSlider {
-  flex: 1;
-  margin-right: 0.5rem;
-}
+    stopRequested = false;
+    shuffleLoopRunning = true;
 
-#durationLabel {
-  width: 2.5rem;
-  text-align: center;
-  font-weight: bold;
-}
+    const durationMinutes = parseInt(durationSlider.value, 10);
+    const durationMs = durationMinutes * 60 * 1000;
 
-/* Button styles */
-.buttons {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
+    sessionTimeoutId = setTimeout(() => {
+      stopShuffle("Session complete.");
+    }, durationMs);
 
-button {
-  flex: 1;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 1rem;
-  background-color: #007bff;
-  color: white;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-button:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-button:disabled {
-  background-color: #aaa;
-  cursor: not-allowed;
-}
-
-#prompt {
-  margin-top: 2rem;
-  font-size: 1.25rem;
-  text-align: center;
-  min-height: 3rem;
-  padding: 0 1rem;
-  color: #333;
-}
-
-/* Very small screens */
-@media (max-width: 320px) {
-  #durationLabel {
-    font-size: 0.9rem;
-    width: 2rem;
+    startLoop();
   }
-  button {
-    padding: 0.5rem;
-    font-size: 0.9rem;
+});
+
+// Stop button logic
+stopBtn.addEventListener("click", () => {
+  stopShuffle("Shuffle stopped.");
+});
+
+// Main loop
+async function startLoop() {
+  if (words.length === 0) {
+    alert('Word list not loaded yet!');
+    shuffleLoopRunning = false;
+    // Reset buttons
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    return;
+  }
+
+  await requestWakeLock();
+
+  while (!stopRequested) {
+    await startShuffle();
+    if (stopRequested) break;
+    await delay(2000);
+  }
+
+  shuffleLoopRunning = false;
+}
+
+// Word shuffle routine
+async function startShuffle() {
+  const word = words[Math.floor(Math.random() * words.length)];
+  await speak(`Your word is ${word}`);
+  await delay(2000);
+
+  for (let letter of word) {
+    if (stopRequested) return;
+    const message = `Think of words that start with ${letter.toUpperCase()}`;
+    document.getElementById("prompt").textContent = message;
+    await speak(message);
+    await delay(3000);
+  }
+
+  document.getElementById("prompt").textContent = "";
+}
+
+// Speech function
+function speak(text) {
+  return new Promise(resolve => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => resolve();
+    speechSynthesis.speak(utterance);
+  });
+}
+
+// Delay helper
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Stop handler
+async function stopShuffle(message) {
+  if (!shuffleLoopRunning && message !== "Session complete.") return;
+
+  stopRequested = true;
+  speechSynthesis.cancel();
+  clearTimeout(sessionTimeoutId);
+  document.getElementById("prompt").textContent = message;
+  shuffleLoopRunning = false;
+
+  // Toggle buttons
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+
+  // Release wake lock
+  if (wakeLock) {
+    try {
+      await wakeLock.release();
+      wakeLock = null;
+      console.log("Wake lock released");
+    } catch (err) {
+      console.warn("Wake lock release failed:", err);
+    }
+  }
+
+  // Attempt to close window
+  window.close();
+}
+
+// Wake Lock logic
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log("Wake lock acquired");
+    }
+  } catch (err) {
+    console.error("Failed to acquire wake lock:", err);
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #111;
-    color: #eee;
+document.addEventListener("visibilitychange", async () => {
+  if (wakeLock && document.visibilityState === "visible") {
+    await requestWakeLock();
   }
-  button {
-    background: #222;
-    color: #eee;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-  }
-  button:hover:not(:disabled) {
-    background: #444;
-  }
-  #durationSlider {
-    filter: invert(1);
-  }
-}
+});
