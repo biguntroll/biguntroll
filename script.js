@@ -1,4 +1,5 @@
 let words = [];
+let stopRequested = false;
 
 fetch('words.json')
   .then(response => response.json())
@@ -7,17 +8,22 @@ fetch('words.json')
   });
 
 document.getElementById("startButton").addEventListener("click", startLoop);
+document.getElementById("stopButton").addEventListener("click", stopShuffle);
 
 async function startLoop() {
+  stopRequested = false;
+
   if (words.length === 0) {
     alert('Word list not loaded yet!');
     return;
   }
 
-  while (true) { // Infinite loop to continuously pick new words
-    await startShuffle(); // Wait for the current word loop to complete
-    await delay(2000); // Add a small pause between words
+  while (!stopRequested) {
+    await startShuffle();
+    await delay(2000);
   }
+
+  document.getElementById("prompt").textContent = "Shuffle stopped.";
 }
 
 async function startShuffle() {
@@ -26,6 +32,8 @@ async function startShuffle() {
   await delay(2000);
 
   for (let letter of word) {
+    if (stopRequested) return;
+
     const message = `Think of words that start with ${letter.toUpperCase()}`;
     document.getElementById("prompt").textContent = message;
     speak(message);
@@ -33,6 +41,11 @@ async function startShuffle() {
   }
 
   document.getElementById("prompt").textContent = "";
+}
+
+function stopShuffle() {
+  stopRequested = true;
+  speechSynthesis.cancel();
 }
 
 function speak(text) {
