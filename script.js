@@ -68,6 +68,7 @@ async function startShuffle() {
     const message = `Think of words that start with ${letter.toUpperCase()}`;
     document.getElementById("prompt").textContent = message;
     await speak(message);
+    await delay(3000);  // Added fixed 3-second delay after speech
   }
 
   document.getElementById("prompt").textContent = "";
@@ -83,7 +84,7 @@ function speak(text) {
   });
 }
 
-// Delay with stop check
+// Delay helper
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
