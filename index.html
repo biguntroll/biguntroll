@@ -6,18 +6,16 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Cognitive ShuffleiNator</h1>
-      <div class="controls">
-        <button id="startButton">Start Shuffle</button>
-        <button id="stopButton">Stop Shuffle</button>
-      </div>      
-      <div class="slider-container">
-        <label for="durationSlider">Session Duration: <span id="durationLabel">30</span> minutes</label><br>
-        <input type="range" id="durationSlider" min="10" max="60" value="30">
-      </div>
-    <p id="prompt"></p>
+  <h1>Cognitive ShuffleiNator</h1>
+  <div class="controls">
+    <button id="startButton">Start Shuffle</button>
+    <button id="stopButton">Stop Shuffle</button>
   </div>
+  <div class="slider-container">
+    <label for="durationSlider">Session Duration: <span id="durationLabel">30</span> minutes</label><br>
+    <input type="range" id="durationSlider" min="10" max="60" value="30">
+  </div>
+  <p id="prompt"></p>
   <script src="script.js"></script>
 </body>
 </html>

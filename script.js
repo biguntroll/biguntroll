@@ -2,6 +2,7 @@ let words = [];
 let stopRequested = false;
 let shuffleLoopRunning = false;
 let sessionTimeoutId = null;
+let wakeLock = null;
 
 // Load word list
 fetch('words.json')
@@ -44,6 +45,8 @@ async function startLoop() {
     shuffleLoopRunning = false;
     return;
   }
+
+  await requestWakeLock();
 
   while (!stopRequested) {
     await startShuffle();
@@ -102,3 +105,22 @@ function stopShuffle(message) {
   document.getElementById("prompt").textContent = message;
   shuffleLoopRunning = false;
 }
+
+// Wake Lock logic
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log("Wake lock acquired");
+    }
+  } catch (err) {
+    console.error("Failed to acquire wake lock:", err);
+  }
+}
+
+// Re-acquire if released
+document.addEventListener("visibilitychange", async () => {
+  if (wakeLock !== null && document.visibilityState === "visible") {
+    await requestWakeLock();
+  }
+});
